@@ -30,9 +30,9 @@ class MarkdownPdfGenerator(private val context: Context) {
             val layout = createLayout(element, settings, contentWidth.toInt())
             val elementHeight = layout.height.toFloat()
             
-            var topSpacing = settings.baseFontSize * 0.8f
+            var topSpacing = settings.baseFontSize * 1.5f // Paragraph spacing (1.5 lines)
             if (element is MarkdownElement.Header && index > 0) {
-                topSpacing = settings.baseFontSize * 1.5f // Extra space before headings
+                topSpacing = settings.baseFontSize * 2.0f // Extra space before headings
             }
 
             // Check if element fits on current page
