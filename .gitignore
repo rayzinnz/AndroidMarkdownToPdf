@@ -1,3 +1,7 @@
+# Added by me
+gradlew
+.artifacts/
+
 # Gradle files
 .gradle/
 build/
