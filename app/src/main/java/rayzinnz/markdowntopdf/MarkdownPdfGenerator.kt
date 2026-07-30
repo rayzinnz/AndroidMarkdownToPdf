@@ -30,7 +30,7 @@ class MarkdownPdfGenerator(private val context: Context) {
             val layout = createLayout(element, settings, contentWidth.toInt())
             val elementHeight = layout.height.toFloat()
             
-            var topSpacing = settings.baseFontSize * 0.5f
+            var topSpacing = settings.baseFontSize * 0.8f
             if (element is MarkdownElement.Header && index > 0) {
                 topSpacing = settings.baseFontSize * 1.5f // Extra space before headings
             }
@@ -105,11 +105,17 @@ class MarkdownPdfGenerator(private val context: Context) {
                 Triple(element.text, settings.baseFontSize, false)
             }
             is MarkdownElement.ListItem -> {
+                textPaint.textSize = settings.baseFontSize
                 val prefix = if (element.ordered) "${element.number}. " else "• "
+                val prefixWidth = textPaint.measureText(prefix)
+                
                 val fullText = TextUtils.concat(prefix, element.text)
                 val spannable = SpannableString(fullText)
-                val indent = settings.baseFontSize * 1.5f
-                spannable.setSpan(LeadingMarginSpan.Standard(0, indent.toInt()), 0, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                
+                val firstIndent = settings.baseFontSize * 1.0f
+                val restIndent = firstIndent + prefixWidth
+                
+                spannable.setSpan(LeadingMarginSpan.Standard(firstIndent.toInt(), restIndent.toInt()), 0, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 Triple(spannable, settings.baseFontSize, false)
             }
         }
