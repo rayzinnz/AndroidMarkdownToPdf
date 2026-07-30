@@ -4,13 +4,13 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
-import android.text.Layout
-import android.text.StaticLayout
-import android.text.TextPaint
+import android.text.*
+import android.text.style.LeadingMarginSpan
+import androidx.core.graphics.createBitmap
+import androidx.core.graphics.withTranslation
 import java.io.File
 import java.io.FileOutputStream
 
@@ -26,26 +26,32 @@ class MarkdownPdfGenerator(private val context: Context) {
         var currentY = settings.marginPoints
         val contentWidth = settings.pageWidthPoints - 2 * settings.marginPoints
 
-        elements.forEach { element ->
+        elements.forEachIndexed { index, element ->
             val layout = createLayout(element, settings, contentWidth.toInt())
             val elementHeight = layout.height.toFloat()
+            
+            var topSpacing = settings.baseFontSize * 0.5f
+            if (element is MarkdownElement.Header && index > 0) {
+                topSpacing = settings.baseFontSize * 1.5f // Extra space before headings
+            }
 
             // Check if element fits on current page
-            if (currentY + elementHeight > settings.pageHeightPoints - settings.marginPoints) {
+            if (currentY + elementHeight + topSpacing > settings.pageHeightPoints - settings.marginPoints) {
                 document.finishPage(page)
                 pageNumber++
                 pageInfo = PdfDocument.PageInfo.Builder(settings.pageWidthPoints, settings.pageHeightPoints, pageNumber).create()
                 page = document.startPage(pageInfo)
                 canvas = page.canvas
                 currentY = settings.marginPoints
+            } else if (index > 0) {
+                currentY += topSpacing
             }
 
-            canvas.save()
-            canvas.translate(settings.marginPoints, currentY)
-            layout.draw(canvas)
-            canvas.restore()
+            canvas.withTranslation(settings.marginPoints, currentY) {
+                layout.draw(this)
+            }
 
-            currentY += elementHeight + (settings.baseFontSize * 0.5f) // Spacing between elements
+            currentY += elementHeight
         }
 
         document.finishPage(page)
@@ -66,7 +72,7 @@ class MarkdownPdfGenerator(private val context: Context) {
             val page = renderer.openPage(i)
             // Use higher resolution for preview? A4 is ~600x840 points.
             // Screen density might matter. Let's try 2x for better quality.
-            val bitmap = Bitmap.createBitmap(settings.pageWidthPoints * 2, settings.pageHeightPoints * 2, Bitmap.Config.ARGB_8888)
+            val bitmap = createBitmap(settings.pageWidthPoints * 2, settings.pageHeightPoints * 2, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             canvas.drawColor(Color.WHITE)
             canvas.scale(2f, 2f)
@@ -100,7 +106,11 @@ class MarkdownPdfGenerator(private val context: Context) {
             }
             is MarkdownElement.ListItem -> {
                 val prefix = if (element.ordered) "${element.number}. " else "• "
-                Triple(prefix + element.text, settings.baseFontSize, false)
+                val fullText = TextUtils.concat(prefix, element.text)
+                val spannable = SpannableString(fullText)
+                val indent = settings.baseFontSize * 1.5f
+                spannable.setSpan(LeadingMarginSpan.Standard(0, indent.toInt()), 0, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                Triple(spannable, settings.baseFontSize, false)
             }
         }
 

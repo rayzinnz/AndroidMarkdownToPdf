@@ -23,7 +23,7 @@ fun MarkdownScreen(
     val markdownText by viewModel.markdownText.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val previewBitmaps by viewModel.previewBitmaps.collectAsState()
-    val clipboardManager = LocalClipboardManager()
+    val clipboardManager = LocalClipboardManager.current
 
     Column(
         modifier = Modifier
@@ -47,8 +47,9 @@ fun MarkdownScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Button(onClick = {
-                clipboardManager.getText()?.let {
-                    viewModel.onMarkdownChange(it.text)
+                val text = clipboardManager.getText()?.text
+                if (text != null) {
+                    viewModel.onMarkdownChange(text)
                 }
             }) {
                 Text("Paste")
