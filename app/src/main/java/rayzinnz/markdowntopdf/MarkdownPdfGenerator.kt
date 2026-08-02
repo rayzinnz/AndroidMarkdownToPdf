@@ -1,9 +1,7 @@
 package rayzinnz.markdowntopdf
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Canvas
-import android.graphics.Color
+import android.graphics.*
 import android.graphics.pdf.PdfDocument
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
@@ -91,9 +89,13 @@ class MarkdownPdfGenerator(private val context: Context) {
         val textPaint = TextPaint().apply {
             color = Color.BLACK
             isAntiAlias = true
+            isSubpixelText = true
+            isLinearText = true
+            hinting = Paint.HINTING_OFF
+            letterSpacing = 0.00f
         }
 
-        val (text, fontSize, isBold) = when (element) {
+        val (text, fontSize, typeface) = when (element) {
             is MarkdownElement.Header -> {
                 val size = when (element.level) {
                     1 -> settings.baseFontSize * 2f
@@ -101,10 +103,10 @@ class MarkdownPdfGenerator(private val context: Context) {
                     3 -> settings.baseFontSize * 1.25f
                     else -> settings.baseFontSize * 1.1f
                 }
-                Triple(element.text, size, true)
+                Triple(element.text, size, Typeface.create(Typeface.DEFAULT, Typeface.BOLD))
             }
             is MarkdownElement.Paragraph -> {
-                Triple(element.text, settings.baseFontSize, false)
+                Triple(element.text, settings.baseFontSize, Typeface.DEFAULT)
             }
             is MarkdownElement.ListItem -> {
                 textPaint.textSize = settings.baseFontSize
@@ -118,12 +120,12 @@ class MarkdownPdfGenerator(private val context: Context) {
                 val restIndent = firstIndent + prefixWidth
                 
                 spannable.setSpan(LeadingMarginSpan.Standard(firstIndent.toInt(), restIndent.toInt()), 0, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                Triple(spannable, settings.baseFontSize, false)
+                Triple(spannable, settings.baseFontSize, Typeface.DEFAULT)
             }
         }
 
         textPaint.textSize = fontSize
-        textPaint.isFakeBoldText = isBold
+        textPaint.typeface = typeface
 
         return StaticLayout.Builder.obtain(text, 0, text.length, textPaint, width)
             .setAlignment(Layout.Alignment.ALIGN_NORMAL)
