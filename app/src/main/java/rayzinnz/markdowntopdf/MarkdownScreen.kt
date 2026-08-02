@@ -22,6 +22,7 @@ fun MarkdownScreen(
 ) {
     val markdownText by viewModel.markdownText.collectAsState()
     val settings by viewModel.settings.collectAsState()
+    val bottomMarginCm by viewModel.bottomMarginCm.collectAsState()
     val previewBitmaps by viewModel.previewBitmaps.collectAsState()
     val clipboardManager = LocalClipboardManager.current
 
@@ -60,11 +61,19 @@ fun MarkdownScreen(
             }
         }
 
-        Text("Zoom (Base Font Size: ${settings.baseFontSize.toInt()})")
+        Text("Zoom (Base Font Size: ${"%.1f".format(settings.baseFontSize)})")
         Slider(
             value = settings.baseFontSize,
             onValueChange = { viewModel.onZoomChange(it) },
-            valueRange = 8f..32f,
+            valueRange = 8f..20f,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Text("Bottom Margin: ${"%.1f".format(bottomMarginCm)} cm")
+        Slider(
+            value = bottomMarginCm,
+            onValueChange = { viewModel.onBottomMarginChange(it) },
+            valueRange = 0.5f..4.0f,
             modifier = Modifier.fillMaxWidth()
         )
 

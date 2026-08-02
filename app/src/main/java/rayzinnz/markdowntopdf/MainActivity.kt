@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -15,6 +16,25 @@ import rayzinnz.markdowntopdf.ui.theme.MarkdownToPdfTheme
 class MainActivity : ComponentActivity() {
     private val viewModel: MarkdownViewModel by viewModels()
 
+    private val createDocumentLauncher = registerForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
+        uri?.let {
+            val generator = viewModel.getPdfGenerator()
+            val elements = viewModel.getParsedElements()
+            val settings = viewModel.settings.value
+            val document = generator.generatePdf(elements, settings)
+            FileUtils.savePdfToUri(this, document, it)
+            document.close()
+            
+            // Persist the filename if it was changed in the dialog
+            it.lastPathSegment?.let { path ->
+                val fileName = path.substringAfterLast("/")
+                if (fileName.isNotEmpty()) {
+                    viewModel.updateLastFileName(fileName)
+                }
+            }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -25,12 +45,7 @@ class MainActivity : ComponentActivity() {
                         MarkdownScreen(
                             viewModel = viewModel,
                             onSavePdf = {
-                                val generator = viewModel.getPdfGenerator()
-                                val elements = viewModel.getParsedElements()
-                                val settings = viewModel.settings.value
-                                val document = generator.generatePdf(elements, settings)
-                                FileUtils.savePdfToDownloads(this@MainActivity, document, "Converted.pdf")
-                                document.close()
+                                createDocumentLauncher.launch(viewModel.lastFileName.value)
                             }
                         )
                     }

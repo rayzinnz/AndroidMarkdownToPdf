@@ -33,10 +33,12 @@ class MarkdownPdfGenerator(private val context: Context) {
             var topSpacing = settings.baseFontSize * 1.5f // Paragraph spacing (1.5 lines)
             if (element is MarkdownElement.Header && index > 0) {
                 topSpacing = settings.baseFontSize * 2.0f // Extra space before headings
+            } else if (element is MarkdownElement.ListItem && index > 0 && elements[index - 1] is MarkdownElement.ListItem) {
+                topSpacing = 0f // Single line spacing between list items
             }
 
             // Check if element fits on current page
-            if (currentY + elementHeight + topSpacing > settings.pageHeightPoints - settings.marginPoints) {
+            if (currentY + elementHeight + topSpacing > settings.pageHeightPoints - settings.bottomMarginPoints) {
                 document.finishPage(page)
                 pageNumber++
                 pageInfo = PdfDocument.PageInfo.Builder(settings.pageWidthPoints, settings.pageHeightPoints, pageNumber).create()

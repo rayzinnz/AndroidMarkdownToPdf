@@ -3,6 +3,7 @@ package rayzinnz.markdowntopdf
 import android.content.ContentValues
 import android.content.Context
 import android.graphics.pdf.PdfDocument
+import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -12,6 +13,17 @@ import java.io.FileOutputStream
 import java.io.OutputStream
 
 object FileUtils {
+    fun savePdfToUri(context: Context, document: PdfDocument, uri: Uri) {
+        try {
+            context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+                document.writeTo(outputStream)
+                Toast.makeText(context, "PDF Saved Successfully", Toast.LENGTH_SHORT).show()
+            }
+        } catch (e: Exception) {
+            Toast.makeText(context, "Failed to save: ${e.message}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
     fun savePdfToDownloads(context: Context, document: PdfDocument, fileName: String) {
         val resolver = context.contentResolver
         val contentValues = ContentValues().apply {
