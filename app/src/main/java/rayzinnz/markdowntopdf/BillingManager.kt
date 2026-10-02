@@ -3,10 +3,16 @@ package rayzinnz.markdowntopdf
 import android.app.Activity
 import android.util.Log
 import com.android.billingclient.api.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class BillingManager(private val activity: Activity) : PurchasesUpdatedListener {
+
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     private val billingClient = BillingClient.newBuilder(activity)
         .setListener(this)
@@ -33,13 +39,15 @@ class BillingManager(private val activity: Activity) : PurchasesUpdatedListener 
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                    Log.d("BillingManager", "Billing setup finished")
+                    Log.d("BillingManager", "Billing setup finished successfully")
                     queryProducts()
+                } else {
+                    Log.e("BillingManager", "Billing setup failed: responseCode=${billingResult.responseCode}, debugMessage=${billingResult.debugMessage}")
                 }
             }
 
             override fun onBillingServiceDisconnected() {
-                Log.d("BillingManager", "Billing service disconnected")
+                Log.w("BillingManager", "Billing service disconnected")
             }
         })
     }
@@ -49,13 +57,18 @@ class BillingManager(private val activity: Activity) : PurchasesUpdatedListener 
             .setProductList(productList)
             .build()
 
-        billingClient.queryProductDetailsAsync(queryProductDetailsParams) { billingResult, productDetailsList ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                coffeeProductDetails = productDetailsList.find { it.productId == "coffee_tip_3" }
+        scope.launch {
+            val result = billingClient.queryProductDetails(queryProductDetailsParams)
+            if (result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                coffeeProductDetails = result.productDetailsList?.find { it.productId == "coffee_tip_3" }
                 if (coffeeProductDetails != null) {
                     _isReady.value = true
                     Log.d("BillingManager", "Coffee product details found: ${coffeeProductDetails?.name}")
+                } else {
+                    Log.w("BillingManager", "Product 'coffee_tip_3' was not returned by Google Play. Make sure in-app product 'coffee_tip_3' is created, active, and published in Google Play Console.")
                 }
+            } else {
+                Log.e("BillingManager", "Failed to query product details: responseCode=${result.billingResult.responseCode}, debugMessage=${result.billingResult.debugMessage}")
             }
         }
     }
@@ -93,8 +106,9 @@ class BillingManager(private val activity: Activity) : PurchasesUpdatedListener 
                 val acknowledgePurchaseParams = AcknowledgePurchaseParams.newBuilder()
                     .setPurchaseToken(purchase.purchaseToken)
                     .build()
-                
-                billingClient.acknowledgePurchase(acknowledgePurchaseParams) { billingResult ->
+
+                scope.launch {
+                    val billingResult = billingClient.acknowledgePurchase(acknowledgePurchaseParams)
                     if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                         Log.d("BillingManager", "Purchase acknowledged")
                     }
